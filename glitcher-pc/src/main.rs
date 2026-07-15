@@ -38,6 +38,24 @@ fn main() -> Result<()> {
                 bail!("version mismatch");
             }
         }
+        Command::Reboot => {
+            let response = console::send(&cli.port, &Host2ControllerMessage::Reboot)?;
+            if !matches!(response, Controller2HostMessage::Rebooting) {
+                bail!("Pico returned an unexpected response to a reboot request");
+            }
+            println!("Pico is rebooting");
+        }
+        Command::CountChipSelects { timeout_s } => {
+            let response = console::send(
+                &cli.port,
+                &Host2ControllerMessage::CountChipSelects { timeout_s },
+            )?;
+            let Controller2HostMessage::ChipSelectCount(count) = response else {
+                bail!("Pico returned an unexpected response to a chip-select count request");
+            };
+
+            println!("Chip-select falling edges: {count}");
+        }
         Command::GenerateCompletions { shell } => {
             generate(
                 shell,

@@ -22,6 +22,15 @@ pub enum Command {
     /// Check that the Pico firmware matches this application's version.
     CheckVersion,
 
+    /// Reboot the Pico controller.
+    Reboot,
+
+    /// Count chip-select falling edges, default 1s.
+    CountChipSelects {
+        #[arg(default_value_t = 1)]
+        timeout_s: u32,
+    },
+
     /// Write shell completions to standard output.
     GenerateCompletions {
         /// Shell to generate completions for.
