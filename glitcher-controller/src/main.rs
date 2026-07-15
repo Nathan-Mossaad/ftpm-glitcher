@@ -3,24 +3,18 @@
 
 use defmt::{info, warn};
 use embassy_executor::Spawner;
-use embassy_rp::gpio::{Flex, Pull};
-use embassy_rp::peripherals::{DMA_CH0, DMA_CH1, DMA_CH2, DMA_CH3, PIN_2, PIN_4, PIN_5, SPI0};
-use embassy_rp::spi::{Config, Spi};
 use embassy_rp::watchdog::Watchdog;
-use embassy_rp::{Peri, bind_interrupts, dma};
-use embassy_time::{Duration, Timer, with_timeout};
+use embassy_time::Timer;
 use glitcher_rpc::{
     ChunkStatus, Controller2HostMessage, FirmwareVersion, Host2ControllerMessage, RpcMessage,
-    SPI_TAP_MAX_BYTES, SpiTapError, postcard,
+    SPI_TAP_MAX_BYTES, postcard,
 };
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
+mod chip_select;
 mod serial;
-
-bind_interrupts!(struct Irqs {
-    DMA_IRQ_0 => dma::InterruptHandler<DMA_CH0>, dma::InterruptHandler<DMA_CH1>, dma::InterruptHandler<DMA_CH2>, dma::InterruptHandler<DMA_CH3>;
-});
+mod spi_tap;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -80,14 +74,14 @@ async fn main(spawner: Spawner) {
                 }
                 Host2ControllerMessage::CountChipSelects { timeout_s } => {
                     Controller2HostMessage::ChipSelectCount(
-                        count_chip_selects(timeout_s, &mut slave_cs_pin).await,
+                        chip_select::count_chip_selects(timeout_s, &mut slave_cs_pin).await,
                     )
                 }
                 Host2ControllerMessage::TapSpi {
                     byte_count,
                     timeout_s,
                 } => {
-                    let result = tap_spi(
+                    let result = spi_tap::tap_spi(
                         &mut spi0,
                         &mut slave_clk,
                         &mut slave_miso,
@@ -170,82 +164,4 @@ fn firmware_version() -> FirmwareVersion {
         minor: env!("CARGO_PKG_VERSION_MINOR").parse().unwrap(),
         patch: env!("CARGO_PKG_VERSION_PATCH").parse().unwrap(),
     }
-}
-
-async fn count_chip_selects(timeout_s: u32, slave_cs_pin: &mut Peri<'static, PIN_5>) -> u32 {
-    let mut slave_cs_pin = Flex::new(slave_cs_pin.reborrow());
-    slave_cs_pin.set_pull(Pull::None);
-    slave_cs_pin.set_as_input();
-
-    let mut count: u32 = 0;
-    while with_timeout(
-        Duration::from_secs(timeout_s as u64),
-        slave_cs_pin.wait_for_falling_edge(),
-    )
-    .await
-    .is_ok()
-    {
-        count = count.saturating_add(1);
-    }
-
-    count
-}
-
-async fn tap_spi(
-    spi0: &mut Peri<'static, SPI0>,
-    slave_clk: &mut Peri<'static, PIN_2>,
-    slave_miso: &mut Peri<'static, PIN_4>,
-    slave_cs_pin: &mut Peri<'static, PIN_5>,
-    spi_tx_dma: &mut Peri<'static, DMA_CH2>,
-    spi_rx_dma: &mut Peri<'static, DMA_CH3>,
-    capture: &mut [u8; SPI_TAP_MAX_BYTES],
-    byte_count: u16,
-    timeout_s: u32,
-) -> Result<SpiTapResult, SpiTapError> {
-    let byte_count = usize::from(byte_count);
-    if !(1..=SPI_TAP_MAX_BYTES).contains(&byte_count) {
-        return Err(SpiTapError::InvalidByteCount);
-    }
-
-    let mut config = Config::default();
-    config.phase = embassy_rp::spi::Phase::CaptureOnSecondTransition;
-    config.polarity = embassy_rp::spi::Polarity::IdleHigh;
-    let mut spi = Spi::new_slave_rxonly(
-        spi0.reborrow(),
-        slave_clk.reborrow(),
-        slave_miso.reborrow(),
-        slave_cs_pin.reborrow(),
-        spi_tx_dma.reborrow(),
-        spi_rx_dma.reborrow(),
-        Irqs,
-        config,
-    );
-    let result = with_timeout(
-        Duration::from_secs(timeout_s as u64),
-        spi.read(&mut capture[..byte_count]),
-    )
-    .await;
-
-    // On timeout, dropping the SPI read future aborts the RX DMA transfer.
-    // The RP2040 DMA transfer count then reports how many bytes were still
-    // outstanding, so the leading bytes in `capture` are valid received data.
-    drop(spi);
-    let remaining = embassy_rp::pac::DMA.ch(3).trans_count().read() as usize;
-
-    match result {
-        Ok(Ok(())) => Ok(SpiTapResult {
-            byte_count,
-            timed_out: false,
-        }),
-        Ok(Err(_)) => Err(SpiTapError::ReadFailed),
-        Err(_) => Ok(SpiTapResult {
-            byte_count: byte_count.saturating_sub(remaining.min(byte_count)),
-            timed_out: true,
-        }),
-    }
-}
-
-struct SpiTapResult {
-    byte_count: usize,
-    timed_out: bool,
 }
