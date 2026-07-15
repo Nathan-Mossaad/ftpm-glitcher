@@ -1,9 +1,7 @@
 use anyhow::{Result, bail};
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
-use glitcher_rpc::{
-    Controller2HostMessage, FirmwareVersion, Host2ControllerMessage, SPI_TAP_MAX_BYTES,
-};
+use glitcher_rpc::{Controller2HostMessage, FirmwareVersion, Host2ControllerMessage};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
@@ -62,29 +60,13 @@ fn main() -> Result<()> {
             byte_count,
             timeout_s,
         } => {
-            let response = console::send(
-                &cli.port,
-                &Host2ControllerMessage::TapSpi {
-                    byte_count,
-                    timeout_s,
-                },
-            )?;
-            match response {
-                Controller2HostMessage::SpiTap {
-                    data,
-                    byte_count,
-                    timed_out,
-                } => {
-                    let byte_count = usize::from(byte_count).min(SPI_TAP_MAX_BYTES);
-                    if timed_out {
-                        eprintln!(
-                            "SPI tap timed out after {timeout_s} seconds; returning partial capture"
-                        );
-                    }
-                    println!("SPI RX: {:02x?}", &data[..byte_count]);
-                }
-                Controller2HostMessage::SpiTapError(error) => bail!("SPI tap failed: {error}"),
-                _ => bail!("Pico returned an unexpected response to an SPI tap request"),
+            let capture = console::tap_spi(&cli.port, byte_count, timeout_s)?;
+            if capture.timed_out {
+                eprintln!("SPI tap timed out after {timeout_s} seconds; returning partial capture");
+            }
+            println!("SPI RX: {:02x?}", capture.data);
+            if capture.timed_out {
+                bail!("SPI tap timed out after {timeout_s} seconds; Partial capture!");
             }
         }
         Command::GenerateCompletions { shell } => {

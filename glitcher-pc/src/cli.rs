@@ -31,11 +31,11 @@ pub enum Command {
         timeout_s: u32,
     },
 
-    /// Capture a single SPI0 transaction (up to 32 bytes).
+    /// Capture a single SPI0 transaction (up to 16 KiB).
     TapSpi {
-        /// Number of bytes to capture (1 through 32).
-        #[arg(long, default_value_t = 32, value_parser = clap::value_parser!(u8).range(1..=32))]
-        byte_count: u8,
+        /// Number of bytes to capture (1 through 16384).
+        #[arg(long, default_value_t = 32, value_parser = clap::value_parser!(u16).range(1..=16384))]
+        byte_count: u16,
 
         /// Seconds to wait for the transaction.
         #[arg(long, default_value_t = 1)]

@@ -5,9 +5,32 @@ pub use postcard;
 use serde::{Deserialize, Serialize};
 
 /// The largest SPI transaction the tap currently captures.
+pub const SPI_TAP_MAX_BYTES: usize = 16 * 1024;
+
+/// Capture data carried in one USB/RPC response frame.
 ///
-/// SPI tap captures are deliberately limited to one USB/RPC packet for now.
-pub const SPI_TAP_MAX_BYTES: usize = 32;
+/// This leaves room for the RPC envelope and COBS framing in a 64-byte USB
+/// full-speed packet.
+pub const CHUNK_BYTES: usize = 32;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "mcu", derive(defmt::Format))]
+pub enum ChunkStatus {
+    Complete,
+    TimedOut,
+}
+
+/// One frame of a generic chunked RPC transfer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "mcu", derive(defmt::Format))]
+pub struct Chunk {
+    pub offset: u16,
+    pub data: [u8; CHUNK_BYTES],
+    pub byte_count: u8,
+    pub is_last: bool,
+    /// Meaningful on the final chunk.
+    pub status: ChunkStatus,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "mcu", derive(defmt::Format))]
@@ -59,9 +82,9 @@ pub enum Host2ControllerMessage {
     CountChipSelects {
         timeout_s: u32,
     },
-    /// Capture one SPI0 slave transaction. `byte_count` must be 1..=32.
+    /// Capture one SPI0 slave transaction. `byte_count` must be 1..=16384.
     TapSpi {
-        byte_count: u8,
+        byte_count: u16,
         timeout_s: u32,
     },
 }
@@ -75,12 +98,6 @@ pub enum Controller2HostMessage {
     Rebooting,
     Version(FirmwareVersion),
     ChipSelectCount(u32),
-    /// One SPI tap capture. `byte_count` indicates how many leading bytes are
-    /// valid; `timed_out` distinguishes a partial capture from a full one.
-    SpiTap {
-        data: [u8; SPI_TAP_MAX_BYTES],
-        byte_count: u8,
-        timed_out: bool,
-    },
+    Chunk(Chunk),
     SpiTapError(SpiTapError),
 }

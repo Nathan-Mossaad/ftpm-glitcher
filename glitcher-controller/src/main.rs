@@ -10,9 +10,10 @@ use embassy_rp::watchdog::Watchdog;
 use embassy_rp::{Peri, bind_interrupts, dma};
 use embassy_time::{Duration, Timer, with_timeout};
 use glitcher_rpc::{
-    Controller2HostMessage, FirmwareVersion, Host2ControllerMessage, RpcMessage, SPI_TAP_MAX_BYTES,
-    SpiTapError, postcard,
+    ChunkStatus, Controller2HostMessage, FirmwareVersion, Host2ControllerMessage, RpcMessage,
+    SPI_TAP_MAX_BYTES, SpiTapError, postcard,
 };
+use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
 mod serial;
@@ -38,6 +39,8 @@ async fn main(spawner: Spawner) {
     let mut slave_cs_pin = p.PIN_5;
     let mut spi_tx_dma = p.DMA_CH2;
     let mut spi_rx_dma = p.DMA_CH3;
+    static SPI_CAPTURE: StaticCell<[u8; SPI_TAP_MAX_BYTES]> = StaticCell::new();
+    let capture = SPI_CAPTURE.init([0; SPI_TAP_MAX_BYTES]);
 
     loop {
         class.wait_connection().await;
@@ -84,17 +87,45 @@ async fn main(spawner: Spawner) {
                     byte_count,
                     timeout_s,
                 } => {
-                    tap_spi(
+                    let result = tap_spi(
                         &mut spi0,
                         &mut slave_clk,
                         &mut slave_miso,
                         &mut slave_cs_pin,
                         &mut spi_tx_dma,
                         &mut spi_rx_dma,
+                        capture,
                         byte_count,
                         timeout_s,
                     )
-                    .await
+                    .await;
+
+                    match result {
+                        Ok(result) => {
+                            let status = if result.timed_out {
+                                ChunkStatus::TimedOut
+                            } else {
+                                ChunkStatus::Complete
+                            };
+                            match serial::write_chunked(
+                                &mut class,
+                                request.id,
+                                &capture[..result.byte_count],
+                                status,
+                                &mut buf,
+                            )
+                            .await
+                            {
+                                Ok(()) => continue,
+                                Err(serial::ChunkWriteError::Disconnected) => break,
+                                Err(serial::ChunkWriteError::Serialize(error)) => {
+                                    warn!("Failed to serialize chunked response: {}", error);
+                                    continue;
+                                }
+                            }
+                        }
+                        Err(error) => Controller2HostMessage::SpiTapError(error),
+                    }
                 }
             };
             let response = RpcMessage {
@@ -104,7 +135,7 @@ async fn main(spawner: Spawner) {
             info!("Sending: {:?}", response);
 
             // Serialize response
-            let response_bytes = match postcard::to_slice(&response, &mut buf) {
+            let response_bytes = match postcard::to_slice_cobs(&response, &mut buf) {
                 Ok(bytes) => bytes,
                 Err(error) => {
                     warn!("Failed to serialize response: {}", error);
@@ -167,15 +198,15 @@ async fn tap_spi(
     slave_cs_pin: &mut Peri<'static, PIN_5>,
     spi_tx_dma: &mut Peri<'static, DMA_CH2>,
     spi_rx_dma: &mut Peri<'static, DMA_CH3>,
-    byte_count: u8,
+    capture: &mut [u8; SPI_TAP_MAX_BYTES],
+    byte_count: u16,
     timeout_s: u32,
-) -> Controller2HostMessage {
+) -> Result<SpiTapResult, SpiTapError> {
     let byte_count = usize::from(byte_count);
     if !(1..=SPI_TAP_MAX_BYTES).contains(&byte_count) {
-        return Controller2HostMessage::SpiTapError(SpiTapError::InvalidByteCount);
+        return Err(SpiTapError::InvalidByteCount);
     }
 
-    let mut capture = [0; SPI_TAP_MAX_BYTES];
     let mut config = Config::default();
     config.phase = embassy_rp::spi::Phase::CaptureOnSecondTransition;
     config.polarity = embassy_rp::spi::Polarity::IdleHigh;
@@ -202,16 +233,19 @@ async fn tap_spi(
     let remaining = embassy_rp::pac::DMA.ch(3).trans_count().read() as usize;
 
     match result {
-        Ok(Ok(())) => Controller2HostMessage::SpiTap {
-            data: capture,
-            byte_count: byte_count as u8,
+        Ok(Ok(())) => Ok(SpiTapResult {
+            byte_count,
             timed_out: false,
-        },
-        Ok(Err(_)) => Controller2HostMessage::SpiTapError(SpiTapError::ReadFailed),
-        Err(_) => Controller2HostMessage::SpiTap {
-            data: capture,
-            byte_count: byte_count.saturating_sub(remaining.min(byte_count)) as u8,
+        }),
+        Ok(Err(_)) => Err(SpiTapError::ReadFailed),
+        Err(_) => Ok(SpiTapResult {
+            byte_count: byte_count.saturating_sub(remaining.min(byte_count)),
             timed_out: true,
-        },
+        }),
     }
+}
+
+struct SpiTapResult {
+    byte_count: usize,
+    timed_out: bool,
 }
