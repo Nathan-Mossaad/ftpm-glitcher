@@ -4,11 +4,16 @@ version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "hornet"
+name = "glitcher"
 path = "src/main.rs"
 
 [dependencies]
+anyhow = "1"
 glitcher-rpc = { path = "../glitcher-rpc", version = "0.1.0"}
+
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
+serialport = { version = "4", default-features = false }
 
 tracing = "0.1"
 tracing-subscriber = { version="0.3", features = ["env-filter"]}
