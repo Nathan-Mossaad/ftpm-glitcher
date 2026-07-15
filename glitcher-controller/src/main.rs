@@ -3,7 +3,7 @@
 
 use defmt::{info, warn};
 use embassy_executor::Spawner;
-use glitcher_rpc::{Controller2HostMessage, Host2ControllerMessage, postcard};
+use glitcher_rpc::{Controller2HostMessage, FirmwareVersion, Host2ControllerMessage, postcard};
 use {defmt_rtt as _, panic_probe as _};
 
 mod serial;
@@ -37,6 +37,9 @@ async fn main(spawner: Spawner) {
                     info!("Received: {:?}", message);
                     match message {
                         Host2ControllerMessage::Ping => Controller2HostMessage::Pong,
+                        Host2ControllerMessage::GetVersion => {
+                            Controller2HostMessage::Version(firmware_version())
+                        }
                     }
                 }
                 Err(error) => {
@@ -67,5 +70,13 @@ async fn main(spawner: Spawner) {
         }
 
         info!("Disconnected");
+    }
+}
+
+fn firmware_version() -> FirmwareVersion {
+    FirmwareVersion {
+        major: env!("CARGO_PKG_VERSION_MAJOR").parse().unwrap(),
+        minor: env!("CARGO_PKG_VERSION_MINOR").parse().unwrap(),
+        patch: env!("CARGO_PKG_VERSION_PATCH").parse().unwrap(),
     }
 }

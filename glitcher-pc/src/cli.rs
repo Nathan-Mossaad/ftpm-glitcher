@@ -19,6 +19,9 @@ pub enum Command {
     /// Send a ping to the controller.
     Ping,
 
+    /// Check that the Pico firmware matches this application's version.
+    CheckVersion,
+
     /// Write shell completions to standard output.
     GenerateCompletions {
         /// Shell to generate completions for.

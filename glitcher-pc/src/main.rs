@@ -1,7 +1,7 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
-use glitcher_rpc::Host2ControllerMessage;
+use glitcher_rpc::{Controller2HostMessage, FirmwareVersion, Host2ControllerMessage};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
@@ -23,6 +23,21 @@ fn main() -> Result<()> {
             console::send(&cli.port, &ping)?;
             println!("Pong")
         }
+        Command::CheckVersion => {
+            let desktop_version = desktop_version();
+            let response = console::send(&cli.port, &Host2ControllerMessage::GetVersion)?;
+            let Controller2HostMessage::Version(firmware_version) = response else {
+                bail!("Pico returned an unexpected response to a version request");
+            };
+
+            println!("Desktop application version: {desktop_version}");
+            println!("Pico firmware version: {firmware_version}");
+
+            if desktop_version != firmware_version {
+                eprintln!("\x1b[31mFAIL: desktop and Pico firmware versions do not match\x1b[0m");
+                bail!("version mismatch");
+            }
+        }
         Command::GenerateCompletions { shell } => {
             generate(
                 shell,
@@ -34,4 +49,12 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn desktop_version() -> FirmwareVersion {
+    FirmwareVersion {
+        major: env!("CARGO_PKG_VERSION_MAJOR").parse().unwrap(),
+        minor: env!("CARGO_PKG_VERSION_MINOR").parse().unwrap(),
+        patch: env!("CARGO_PKG_VERSION_PATCH").parse().unwrap(),
+    }
 }
