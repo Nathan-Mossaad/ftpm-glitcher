@@ -31,6 +31,17 @@ pub enum Command {
         timeout_s: u32,
     },
 
+    /// Capture a single SPI0 transaction (up to 32 bytes).
+    TapSpi {
+        /// Number of bytes to capture (1 through 32).
+        #[arg(long, default_value_t = 32, value_parser = clap::value_parser!(u8).range(1..=32))]
+        byte_count: u8,
+
+        /// Seconds to wait for the transaction.
+        #[arg(long, default_value_t = 1)]
+        timeout_s: u32,
+    },
+
     /// Write shell completions to standard output.
     GenerateCompletions {
         /// Shell to generate completions for.
