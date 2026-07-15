@@ -1,0 +1,14 @@
+[package]
+name = "glitcher-pc"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "hornet"
+path = "src/main.rs"
+
+[dependencies]
+glitcher-rpc = { path = "../glitcher-rpc", version = "0.1.0"}
+
+tracing = "0.1"
+tracing-subscriber = { version="0.3", features = ["env-filter"]}
