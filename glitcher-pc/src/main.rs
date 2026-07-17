@@ -52,6 +52,16 @@ fn main() -> Result<()> {
             }
             println!("Target reboot pulse sent");
         }
+        Command::PressPowerButton { duration_ms } => {
+            let response = console::send(
+                &cli.port,
+                &Host2ControllerMessage::PressPowerButton { duration_ms },
+            )?;
+            if !matches!(response, Controller2HostMessage::PowerButtonPressed) {
+                bail!("Pico returned an unexpected response to a power-button press request");
+            }
+            println!("Target power button held for {duration_ms} ms");
+        }
         Command::CountChipSelects { timeout_s } => {
             let response = console::send(
                 &cli.port,

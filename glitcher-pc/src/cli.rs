@@ -28,6 +28,13 @@ pub enum Command {
     /// Pulse the target reset line without rebooting the Pico controller.
     RebootTarget,
 
+    /// Hold the target's power button down.
+    PressPowerButton {
+        /// Duration to hold the power button, in milliseconds.
+        #[arg(long, value_parser = clap::value_parser!(u32).range(1..), default_value_t = 500)]
+        duration_ms: u32,
+    },
+
     /// Count chip-select falling edges, default 1s.
     CountChipSelects {
         #[arg(default_value_t = 1)]

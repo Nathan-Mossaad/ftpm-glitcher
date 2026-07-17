@@ -113,6 +113,10 @@ pub enum Host2ControllerMessage {
         timeout_s: u32,
         reboot: bool,
     },
+    /// Pull GP14 low for the requested duration to press the target's power button.
+    PressPowerButton {
+        duration_ms: u32,
+    },
 }
 
 // The parent package for all controller to host communication
@@ -131,4 +135,5 @@ pub enum Controller2HostMessage {
     TelemetryTimedOut,
     Svi2Error(Svi2Error),
     TargetRebooted,
+    PowerButtonPressed,
 }

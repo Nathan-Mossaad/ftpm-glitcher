@@ -43,8 +43,17 @@ pub async fn disable_telemetry<PIO: Instance, const SM: usize>(
 
 /// Pulse the target reset line low, leaving it otherwise high-impedance.
 pub async fn reboot_target(target_reboot_pin: &mut Flex<'_>) {
-    target_reboot_pin.set_low();
-    target_reboot_pin.set_as_output();
-    Timer::after_millis(1).await;
-    target_reboot_pin.set_as_input();
+    pulse_low(target_reboot_pin, 1).await;
+}
+
+/// Hold the target power button low, leaving the line otherwise high-impedance.
+pub async fn press_power_button(power_button_pin: &mut Flex<'_>, duration_ms: u32) {
+    pulse_low(power_button_pin, duration_ms).await;
+}
+
+async fn pulse_low(pin: &mut Flex<'_>, duration_ms: u32) {
+    pin.set_low();
+    pin.set_as_output();
+    Timer::after_millis(u64::from(duration_ms)).await;
+    pin.set_as_input();
 }

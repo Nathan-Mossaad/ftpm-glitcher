@@ -62,6 +62,9 @@ async fn main(spawner: Spawner) {
     let mut target_reboot_pin = Flex::new(p.PIN_15);
     target_reboot_pin.set_pull(Pull::None);
     target_reboot_pin.set_as_input();
+    let mut power_button_pin = Flex::new(p.PIN_14);
+    power_button_pin.set_pull(Pull::None);
+    power_button_pin.set_as_input();
 
     loop {
         class.wait_connection().await;
@@ -102,6 +105,10 @@ async fn main(spawner: Spawner) {
                 Host2ControllerMessage::RebootTarget => {
                     attack::reboot_target(&mut target_reboot_pin).await;
                     Controller2HostMessage::TargetRebooted
+                }
+                Host2ControllerMessage::PressPowerButton { duration_ms } => {
+                    attack::press_power_button(&mut power_button_pin, duration_ms).await;
+                    Controller2HostMessage::PowerButtonPressed
                 }
                 Host2ControllerMessage::CountChipSelects { timeout_s } => {
                     Controller2HostMessage::ChipSelectCount(
