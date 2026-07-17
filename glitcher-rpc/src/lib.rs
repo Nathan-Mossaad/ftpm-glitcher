@@ -94,9 +94,10 @@ pub enum Host2ControllerMessage {
     Reboot,
     /// Pull GP15 low for 1 ms to reboot the target without resetting the controller.
     RebootTarget,
-    /// timeout in secs
+    /// Count chip-select falling edges for the requested duration.
     CountChipSelects {
         timeout_s: u32,
+        reboot: bool,
     },
     /// Capture one SPI0 slave transaction. `byte_count` must be 1..=16384.
     TapSpi {

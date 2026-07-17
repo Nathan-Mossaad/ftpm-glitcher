@@ -62,10 +62,10 @@ fn main() -> Result<()> {
             }
             println!("Target power button held for {duration_ms} ms");
         }
-        Command::CountChipSelects { timeout_s } => {
+        Command::CountChipSelects { timeout_s, reboot } => {
             let response = console::send(
                 &cli.port,
-                &Host2ControllerMessage::CountChipSelects { timeout_s },
+                &Host2ControllerMessage::CountChipSelects { timeout_s, reboot },
             )?;
             let Controller2HostMessage::ChipSelectCount(count) = response else {
                 bail!("Pico returned an unexpected response to a chip-select count request");

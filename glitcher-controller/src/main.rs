@@ -110,7 +110,10 @@ async fn main(spawner: Spawner) {
                     attack::press_power_button(&mut power_button_pin, duration_ms).await;
                     Controller2HostMessage::PowerButtonPressed
                 }
-                Host2ControllerMessage::CountChipSelects { timeout_s } => {
+                Host2ControllerMessage::CountChipSelects { timeout_s, reboot } => {
+                    if reboot {
+                        attack::reboot_target(&mut target_reboot_pin).await;
+                    }
                     Controller2HostMessage::ChipSelectCount(
                         chip_select::count_chip_selects(timeout_s, &mut slave_cs_pin).await,
                     )

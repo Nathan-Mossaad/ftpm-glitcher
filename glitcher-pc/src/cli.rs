@@ -39,6 +39,10 @@ pub enum Command {
     CountChipSelects {
         #[arg(default_value_t = 1)]
         timeout_s: u32,
+
+        /// Reboot the target before counting chip-select edges.
+        #[arg(long)]
+        reboot: bool,
     },
 
     /// Capture a single SPI0 transaction (up to 16 KiB).
