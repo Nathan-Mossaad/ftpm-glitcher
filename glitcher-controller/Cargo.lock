@@ -721,8 +721,10 @@ dependencies = [
  "embassy-rp",
  "embassy-time",
  "embassy-usb",
+ "fixed",
  "glitcher-rpc",
  "panic-probe",
+ "pio",
  "portable-atomic",
  "static_cell",
 ]

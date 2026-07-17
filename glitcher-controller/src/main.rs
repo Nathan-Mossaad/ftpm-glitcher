@@ -3,7 +3,7 @@
 
 use defmt::{info, warn};
 use embassy_executor::Spawner;
-use embassy_rp::watchdog::Watchdog;
+use embassy_rp::{bind_interrupts, peripherals::PIO0, pio, watchdog::Watchdog};
 use embassy_time::Timer;
 use glitcher_rpc::{
     ChunkStatus, Controller2HostMessage, FirmwareVersion, Host2ControllerMessage, RpcMessage,
@@ -13,8 +13,14 @@ use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
 mod chip_select;
+#[path = "i2c-pio.rs"]
+mod i2c_pio;
 mod serial;
 mod spi_tap;
+
+bind_interrupts!(struct PioIrqs {
+    PIO0_IRQ_0 => pio::InterruptHandler<PIO0>;
+});
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -35,6 +41,12 @@ async fn main(spawner: Spawner) {
     let mut spi_rx_dma = p.DMA_CH3;
     static SPI_CAPTURE: StaticCell<[u8; SPI_TAP_MAX_BYTES]> = StaticCell::new();
     let capture = SPI_CAPTURE.init([0; SPI_TAP_MAX_BYTES]);
+
+    // PIO I2C: SDA = GPIO16, SCL = GPIO17.
+    let pio::Pio {
+        mut common, sm0, ..
+    } = pio::Pio::new(p.PIO0, PioIrqs);
+    let mut i2c = i2c_pio::I2cPio::new(&mut common, sm0, p.PIN_16, p.PIN_17,2_000_000);
 
     loop {
         class.wait_connection().await;
@@ -120,6 +132,11 @@ async fn main(spawner: Spawner) {
                         }
                         Err(error) => Controller2HostMessage::SpiTapError(error),
                     }
+                }
+                Host2ControllerMessage::SetVid { vid } => {
+                    info!("Setting VID to {:#06x}", vid);
+                    i2c.blocking_write(0x00, &[0xAA, 0xAA]);
+                    Controller2HostMessage::VidSet
                 }
             };
             let response = RpcMessage {

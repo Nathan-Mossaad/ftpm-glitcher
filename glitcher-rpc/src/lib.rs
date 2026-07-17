@@ -39,6 +39,20 @@ pub enum SpiTapError {
     ReadFailed,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "mcu", derive(defmt::Format))]
+pub enum Svi2Error {
+    WriteFailed,
+}
+
+impl core::fmt::Display for Svi2Error {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::WriteFailed => write!(f, "I2C write to the SVI2 controller failed"),
+        }
+    }
+}
+
 impl core::fmt::Display for SpiTapError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -87,6 +101,11 @@ pub enum Host2ControllerMessage {
         byte_count: u16,
         timeout_s: u32,
     },
+    /// Set both SVI2 rails to a raw VID, or apply the Teensy firmware defaults.
+    SetVid {
+        /// A raw eight-bit VID. `None` selects the original default VIDs.
+        vid: Option<u8>,
+    },
 }
 
 // The parent package for all controller to host communication
@@ -100,4 +119,6 @@ pub enum Controller2HostMessage {
     ChipSelectCount(u32),
     Chunk(Chunk),
     SpiTapError(SpiTapError),
+    VidSet,
+    Svi2Error(Svi2Error),
 }

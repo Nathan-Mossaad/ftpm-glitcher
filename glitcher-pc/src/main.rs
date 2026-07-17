@@ -69,6 +69,22 @@ fn main() -> Result<()> {
                 bail!("SPI tap timed out after {timeout_s} seconds; Partial capture!");
             }
         }
+        Command::SetVid { vid } => {
+            let response = console::send(&cli.port, &Host2ControllerMessage::SetVid { vid })?;
+            match response {
+                Controller2HostMessage::VidSet => {
+                    if let Some(vid) = vid {
+                        println!("Applied VID {vid} to VSoc and VCore");
+                    } else {
+                        println!("Applied the default SVI2 VSoc and VCore VIDs");
+                    }
+                }
+                Controller2HostMessage::Svi2Error(error) => {
+                    bail!("SVI2 voltage command failed: {error}");
+                }
+                _ => bail!("Pico returned an unexpected response to an SVI2 voltage request"),
+            }
+        }
         Command::GenerateCompletions { shell } => {
             generate(
                 shell,

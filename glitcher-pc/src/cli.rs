@@ -42,6 +42,13 @@ pub enum Command {
         timeout_s: u32,
     },
 
+    /// Set both SVI2 rails to a raw VID, or use the original default VIDs.
+    SetVid {
+        /// Raw eight-bit VID (0 through 255). Omit to use the original VSoc and VCore defaults.
+        #[arg(value_parser = clap::value_parser!(u8).range(0..=255))]
+        vid: Option<u8>,
+    },
+
     /// Write shell completions to standard output.
     GenerateCompletions {
         /// Shell to generate completions for.
