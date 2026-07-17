@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use defmt::{info, warn};
+use defmt::{error, info, warn};
 use embassy_executor::Spawner;
 use embassy_rp::{
     bind_interrupts,
@@ -56,9 +56,9 @@ async fn main(spawner: Spawner) {
     } = pio::Pio::new(p.PIO0, PioIrqs);
     let mut i2c = i2c_pio::I2cPio::new(&mut common, sm0, p.PIN_16, p.PIN_17, 2_000_000);
 
-    let mut pin18 = Input::new(p.PIN_18, Pull::None);
-    let mut pin19 = Input::new(p.PIN_19, Pull::None);
-    let mut pin20 = Output::new(p.PIN_20, Level::Low);
+    let mut svd_in = Input::new(p.PIN_18, Pull::None);
+    let mut svc_in = Input::new(p.PIN_19, Pull::None);
+    let mut logic_analyzer_trigger = Output::new(p.PIN_20, Level::Low);
     let mut target_reboot_pin = Flex::new(p.PIN_15);
     target_reboot_pin.set_pull(Pull::None);
     target_reboot_pin.set_as_input();
@@ -109,6 +109,16 @@ async fn main(spawner: Spawner) {
                 Host2ControllerMessage::PressPowerButton { duration_ms } => {
                     attack::press_power_button(&mut power_button_pin, duration_ms).await;
                     Controller2HostMessage::PowerButtonPressed
+                }
+                Host2ControllerMessage::GlitchAttack {
+                    spi_byte_count,
+                    vid,
+                    chip_select_count,
+                    wait_duration_ns,
+                    dip_duration_ns,
+                } => {
+                    error!("TODO!");
+                    Controller2HostMessage::GlitchAttackFailed
                 }
                 Host2ControllerMessage::CountChipSelects { timeout_s, reboot } => {
                     if reboot {
@@ -174,12 +184,16 @@ async fn main(spawner: Spawner) {
                 Host2ControllerMessage::DisableTelemetry { timeout_s, reboot } => {
                     if reboot {
                         attack::reboot_target(&mut target_reboot_pin).await;
+                        logic_analyzer_trigger.set_high();
+                        Timer::after_millis(5).await;
+                        logic_analyzer_trigger.set_low();
                     }
-                    pin20.set_high();
-                    Timer::after_millis(5).await;
-                    pin20.set_low();
-                    let message = attack::disable_telemetry(
-                        timeout_s, &mut pin18, &pin19, &mut pin20, &mut i2c,
+                    let message = attack::wait_boot_and_disable_telemetry(
+                        timeout_s,
+                        &mut svd_in,
+                        &mut svc_in,
+                        &mut logic_analyzer_trigger,
+                        &mut i2c,
                     )
                     .await;
                     message

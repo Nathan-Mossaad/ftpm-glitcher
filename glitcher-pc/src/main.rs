@@ -127,6 +127,34 @@ fn main() -> Result<()> {
                 _ => bail!("Pico returned an unexpected response to the telemetry request"),
             }
         }
+        Command::Attack {
+            spi_byte_count,
+            vid,
+            chip_select_count,
+            wait_duration_ns,
+            dip_duration_ns,
+        } => {
+            let response = console::send(
+                &cli.port,
+                &Host2ControllerMessage::GlitchAttack {
+                    spi_byte_count,
+                    vid,
+                    chip_select_count,
+                    wait_duration_ns,
+                    dip_duration_ns,
+                },
+            )?;
+
+            match response {
+                Controller2HostMessage::GlitchAttackSucceeded => {
+                    println!("Glitch attack succeeded");
+                }
+                Controller2HostMessage::GlitchAttackFailed => {
+                    bail!("glitch attack failed");
+                }
+                _ => bail!("Pico returned an unexpected response to a glitch attack request"),
+            }
+        }
         Command::GenerateCompletions { shell } => {
             generate(
                 shell,

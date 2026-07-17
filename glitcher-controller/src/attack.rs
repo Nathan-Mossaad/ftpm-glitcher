@@ -7,35 +7,35 @@ use glitcher_rpc::Controller2HostMessage;
 use crate::i2c_pio::I2cPio;
 use crate::svi2;
 
-pub async fn disable_telemetry<PIO: Instance, const SM: usize>(
+pub async fn wait_boot_and_disable_telemetry<PIO: Instance, const SM: usize>(
     timeout_s: u32,
-    pin18: &mut Input<'_>,
-    pin19: &Input<'_>,
-    pin20: &mut Output<'_>,
+    svd_in: &mut Input<'_>,
+    svc_in: &mut Input<'_>,
+    logic_analyzer_trigger: &mut Output<'_>,
     i2c: &mut I2cPio<'_, PIO, SM>,
 ) -> Controller2HostMessage {
-    match with_timeout(Duration::from_secs(timeout_s as u64), pin18.wait_for_high()).await {
+    match with_timeout(
+        Duration::from_secs(timeout_s as u64),
+        svd_in.wait_for_high(),
+    )
+    .await
+    {
         Ok(()) => {
             // Blocking wait
             Delay.delay_us(50);
 
-            pin20.set_high();
+            logic_analyzer_trigger.set_high();
             // Wait for one toggle to ensure proper timing
-            if (0..10_000).any(|_| pin19.is_low()) && (0..10_000).any(|_| pin19.is_low()) {
-            } else {
+            if !(0..20_000).any(|_| svc_in.is_low()) {
                 return Controller2HostMessage::TelemetryTimedOut;
             }
-            pin20.set_low();
+            logic_analyzer_trigger.set_low();
 
-            if (0..10_000).any(|_| pin19.is_low()) {
-                // No waiting delay of PIO is roughly equals to length of one packet
-                pin20.set_high();
-                svi2::disable_telemetry(i2c);
-                pin20.set_low();
-                Controller2HostMessage::TelemetryDisabled
-            } else {
-                Controller2HostMessage::TelemetryTimedOut
-            }
+            // No waiting delay of PIO is roughly equals to length of one packet
+            logic_analyzer_trigger.set_high();
+            svi2::disable_telemetry(i2c);
+            logic_analyzer_trigger.set_low();
+            Controller2HostMessage::TelemetryDisabled
         }
         Err(_) => Controller2HostMessage::TelemetryTimedOut,
     }

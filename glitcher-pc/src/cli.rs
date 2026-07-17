@@ -78,6 +78,29 @@ pub enum Command {
         reboot: bool,
     },
 
+    /// Run a voltage glitch attack.
+    Attack {
+        /// Number of SPI bytes to capture (1 through 16384).
+        #[arg(long, default_value_t = 32, value_parser = clap::value_parser!(u16).range(1..=16384))]
+        spi_byte_count: u16,
+
+        /// Raw eight-bit VID. Omit to use the controller default VIDs.
+        #[arg(long, value_parser = clap::value_parser!(u8).range(0..=255))]
+        vid: Option<u8>,
+
+        /// Chip-select falling-edge count that triggers the glitch.
+        #[arg(long, default_value_t = 1)]
+        chip_select_count: u32,
+
+        /// Delay after the trigger before dipping the voltage, in nanoseconds.
+        #[arg(long, default_value_t = 0)]
+        wait_duration_ns: u32,
+
+        /// Voltage-dip duration, in nanoseconds.
+        #[arg(long, default_value_t = 0)]
+        dip_duration_ns: u32,
+    },
+
     /// Write shell completions to standard output.
     GenerateCompletions {
         /// Shell to generate completions for.

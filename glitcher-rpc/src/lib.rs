@@ -119,6 +119,14 @@ pub enum Host2ControllerMessage {
     PressPowerButton {
         duration_ms: u32,
     },
+    /// Run a configured voltage glitch attack.
+    GlitchAttack {
+        spi_byte_count: u16,
+        vid: Option<u8>,
+        chip_select_count: u32,
+        wait_duration_ns: u32,
+        dip_duration_ns: u32,
+    },
 }
 
 // The parent package for all controller to host communication
@@ -138,4 +146,6 @@ pub enum Controller2HostMessage {
     Svi2Error(Svi2Error),
     TargetRebooted,
     PowerButtonPressed,
+    GlitchAttackSucceeded,
+    GlitchAttackFailed,
 }
