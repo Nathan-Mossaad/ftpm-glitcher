@@ -106,6 +106,8 @@ pub enum Host2ControllerMessage {
         /// A raw eight-bit VID. `None` selects the original default VIDs.
         vid: Option<u8>,
     },
+    /// Wait for GPIO18 to become high, then disable SVI2 telemetry.
+    DisableTelemetry,
 }
 
 // The parent package for all controller to host communication
@@ -120,5 +122,6 @@ pub enum Controller2HostMessage {
     Chunk(Chunk),
     SpiTapError(SpiTapError),
     VidSet,
+    TelemetryDisabled,
     Svi2Error(Svi2Error),
 }

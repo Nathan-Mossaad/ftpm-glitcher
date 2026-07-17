@@ -49,6 +49,9 @@ pub enum Command {
         vid: Option<u8>,
     },
 
+    /// Wait for GPIO18 to become high, then disable SVI2 telemetry.
+    DisableTelemetry,
+
     /// Write shell completions to standard output.
     GenerateCompletions {
         /// Shell to generate completions for.
