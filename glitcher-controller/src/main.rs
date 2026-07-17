@@ -5,7 +5,7 @@ use defmt::{info, warn};
 use embassy_executor::Spawner;
 use embassy_rp::{
     bind_interrupts,
-    gpio::{Input, Level, Output, Pull},
+    gpio::{Flex, Input, Level, Output, Pull},
     peripherals::PIO0,
     pio,
     watchdog::Watchdog,
@@ -59,6 +59,9 @@ async fn main(spawner: Spawner) {
     let mut pin18 = Input::new(p.PIN_18, Pull::None);
     let mut pin19 = Input::new(p.PIN_19, Pull::None);
     let mut pin20 = Output::new(p.PIN_20, Level::Low);
+    let mut target_reboot_pin = Flex::new(p.PIN_15);
+    target_reboot_pin.set_pull(Pull::None);
+    target_reboot_pin.set_as_input();
 
     loop {
         class.wait_connection().await;
@@ -95,6 +98,10 @@ async fn main(spawner: Spawner) {
                 Host2ControllerMessage::Reboot => {
                     reboot_requested = true;
                     Controller2HostMessage::Rebooting
+                }
+                Host2ControllerMessage::RebootTarget => {
+                    reboot_target(&mut target_reboot_pin).await;
+                    Controller2HostMessage::TargetRebooted
                 }
                 Host2ControllerMessage::CountChipSelects { timeout_s } => {
                     Controller2HostMessage::ChipSelectCount(
@@ -206,6 +213,14 @@ async fn main(spawner: Spawner) {
 
         info!("Disconnected");
     }
+}
+
+/// Pulse the target reset line low, leaving it otherwise high-impedance.
+async fn reboot_target(target_reboot_pin: &mut Flex<'_>) {
+    target_reboot_pin.set_low();
+    target_reboot_pin.set_as_output();
+    Timer::after_millis(1).await;
+    target_reboot_pin.set_as_input();
 }
 
 fn firmware_version() -> FirmwareVersion {

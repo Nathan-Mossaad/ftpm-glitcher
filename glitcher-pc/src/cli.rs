@@ -25,6 +25,9 @@ pub enum Command {
     /// Reboot the Pico controller.
     Reboot,
 
+    /// Pulse the target reset line without rebooting the Pico controller.
+    RebootTarget,
+
     /// Count chip-select falling edges, default 1s.
     CountChipSelects {
         #[arg(default_value_t = 1)]

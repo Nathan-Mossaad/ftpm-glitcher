@@ -92,6 +92,8 @@ pub enum Host2ControllerMessage {
     Ping,
     GetVersion,
     Reboot,
+    /// Pull GP15 low for 1 ms to reboot the target without resetting the controller.
+    RebootTarget,
     /// timeout in secs
     CountChipSelects {
         timeout_s: u32,
@@ -127,4 +129,5 @@ pub enum Controller2HostMessage {
     TelemetryDisabled,
     TelemetryTimedOut,
     Svi2Error(Svi2Error),
+    TargetRebooted,
 }

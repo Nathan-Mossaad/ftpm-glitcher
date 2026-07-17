@@ -45,6 +45,13 @@ fn main() -> Result<()> {
             }
             println!("Pico is rebooting");
         }
+        Command::RebootTarget => {
+            let response = console::send(&cli.port, &Host2ControllerMessage::RebootTarget)?;
+            if !matches!(response, Controller2HostMessage::TargetRebooted) {
+                bail!("Pico returned an unexpected response to a target reboot request");
+            }
+            println!("Target reboot pulse sent");
+        }
         Command::CountChipSelects { timeout_s } => {
             let response = console::send(
                 &cli.port,
