@@ -44,10 +44,16 @@ pub fn send(port_name: &Path, message: &Host2ControllerMessage) -> Result<Contro
 }
 
 /// Capture an SPI transaction and reassemble its COBS-framed response chunks.
-pub fn tap_spi(port_name: &Path, byte_count: u16, timeout_s: u32) -> Result<SpiTapCapture> {
+pub fn tap_spi(
+    port_name: &Path,
+    byte_count: u16,
+    timeout_s: u32,
+    reboot: bool,
+) -> Result<SpiTapCapture> {
     let message = Host2ControllerMessage::TapSpi {
         byte_count,
         timeout_s,
+        reboot,
     };
     let (mut port, request_id) = open_and_send(port_name, &message)?;
     let mut reader = ResponseReader::new();

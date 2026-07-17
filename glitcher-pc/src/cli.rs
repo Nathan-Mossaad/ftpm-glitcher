@@ -50,6 +50,10 @@ pub enum Command {
         /// Seconds to wait for the transaction.
         #[arg(long, default_value_t = 1)]
         timeout_s: u32,
+
+        /// Reboot the target before capturing the transaction.
+        #[arg(long)]
+        reboot: bool,
     },
 
     /// Set both SVI2 rails to a raw VID, or use the original default VIDs.

@@ -118,7 +118,11 @@ async fn main(spawner: Spawner) {
                 Host2ControllerMessage::TapSpi {
                     byte_count,
                     timeout_s,
+                    reboot,
                 } => {
+                    if reboot {
+                        attack::reboot_target(&mut target_reboot_pin).await;
+                    }
                     let result = spi_tap::tap_spi(
                         &mut spi0,
                         &mut slave_clk,

@@ -76,8 +76,9 @@ fn main() -> Result<()> {
         Command::TapSpi {
             byte_count,
             timeout_s,
+            reboot,
         } => {
-            let capture = console::tap_spi(&cli.port, byte_count, timeout_s)?;
+            let capture = console::tap_spi(&cli.port, byte_count, timeout_s, reboot)?;
             if capture.timed_out {
                 eprintln!("SPI tap timed out after {timeout_s} seconds; returning partial capture");
             }

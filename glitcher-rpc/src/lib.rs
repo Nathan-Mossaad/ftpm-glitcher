@@ -102,6 +102,7 @@ pub enum Host2ControllerMessage {
     TapSpi {
         byte_count: u16,
         timeout_s: u32,
+        reboot: bool,
     },
     /// Set both SVI2 rails to a raw VID, or apply the Teensy firmware defaults.
     SetVid {
