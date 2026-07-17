@@ -9,6 +9,7 @@ glitcher-rpc = { path = "../glitcher-rpc", version = "0.1.0", features = ["mcu"]
 embassy-executor = { version = "0.10.0", path = "../embassy/embassy-executor", features = ["platform-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
 embassy-time = { version = "0.5.1", path = "../embassy/embassy-time", features = ["defmt", "defmt-timestamp-uptime"] }
 embassy-rp = { version = "0.10.0", path = "../embassy/embassy-rp", features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp2040"] }
+embassy-embedded-hal = { version = "0.6.0", path = "../embassy/embassy-embedded-hal" }
 embassy-usb = { version = "0.6.0", path = "../embassy/embassy-usb", features = ["defmt"] }
 embassy-futures = { version = "0.1.2", path = "../embassy/embassy-futures" }
 fixed = "1.31.0"
@@ -18,6 +19,8 @@ pio = "0.3.0"
 defmt = "1.0.1"
 defmt-rtt = "1.0.0"
 
+embedded-hal= {version = "1.0" }
+embedded-hal-async = {version = "1.0" }
 
 cortex-m = { version = "0.7.6", features = ["inline-asm"] }
 cortex-m-rt = "0.7.0"

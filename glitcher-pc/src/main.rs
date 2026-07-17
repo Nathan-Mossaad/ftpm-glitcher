@@ -85,11 +85,17 @@ fn main() -> Result<()> {
                 _ => bail!("Pico returned an unexpected response to an SVI2 voltage request"),
             }
         }
-        Command::DisableTelemetry => {
-            let response = console::send(&cli.port, &Host2ControllerMessage::DisableTelemetry)?;
+        Command::DisableTelemetry { timeout_s } => {
+            let response = console::send(
+                &cli.port,
+                &Host2ControllerMessage::DisableTelemetry { timeout_s },
+            )?;
             match response {
                 Controller2HostMessage::TelemetryDisabled => {
                     println!("SVI2 telemetry disabled after GPIO18 went high");
+                }
+                Controller2HostMessage::TelemetryTimedOut => {
+                    bail!("GPIO18 did not become high within {timeout_s} seconds");
                 }
                 Controller2HostMessage::Svi2Error(error) => {
                     bail!("SVI2 telemetry command failed: {error}");

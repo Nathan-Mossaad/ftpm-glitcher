@@ -10,7 +10,8 @@ use embassy_rp::{
     pio,
     watchdog::Watchdog,
 };
-use embassy_time::Timer;
+use embassy_time::{Delay, Duration, Timer, with_timeout};
+use embedded_hal::delay::DelayNs;
 use glitcher_rpc::{
     ChunkStatus, Controller2HostMessage, FirmwareVersion, Host2ControllerMessage, RpcMessage,
     SPI_TAP_MAX_BYTES, postcard,
@@ -56,6 +57,7 @@ async fn main(spawner: Spawner) {
     let mut i2c = i2c_pio::I2cPio::new(&mut common, sm0, p.PIN_16, p.PIN_17, 2_000_000);
 
     let mut pin18 = Input::new(p.PIN_18, Pull::None);
+    let mut pin19 = Input::new(p.PIN_19, Pull::None);
     let mut pin20 = Output::new(p.PIN_20, Level::Low);
 
     loop {
@@ -148,13 +150,26 @@ async fn main(spawner: Spawner) {
                     svi2::set_vid(&mut i2c, vid);
                     Controller2HostMessage::VidSet
                 }
-                Host2ControllerMessage::DisableTelemetry => {
-                    pin18.wait_for_high().await;
-                    Timer::after_micros(1).await;
-                    pin20.set_high();
-                    svi2::disable_telemetry(&mut i2c);
-                    pin20.set_low();
-                    Controller2HostMessage::TelemetryDisabled
+                Host2ControllerMessage::DisableTelemetry { timeout_s } => {
+                    match with_timeout(Duration::from_secs(timeout_s as u64), pin18.wait_for_high())
+                        .await
+                    {
+                        Ok(()) => {
+                            // Blocking wait
+                            Delay.delay_us(8);
+
+                            if (0..10_000).any(|_| pin19.is_low()) {
+                                // No waiting delay of PIO is roughly equals to length of one packet
+                                pin20.set_high();
+                                svi2::disable_telemetry(&mut i2c);
+                                pin20.set_low();
+                                Controller2HostMessage::TelemetryDisabled
+                            } else {
+                                Controller2HostMessage::TelemetryTimedOut
+                            }
+                        }
+                        Err(_) => Controller2HostMessage::TelemetryTimedOut,
+                    }
                 }
             };
             let response = RpcMessage {

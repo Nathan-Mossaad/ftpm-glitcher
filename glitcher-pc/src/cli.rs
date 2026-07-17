@@ -50,7 +50,11 @@ pub enum Command {
     },
 
     /// Wait for GPIO18 to become high, then disable SVI2 telemetry.
-    DisableTelemetry,
+    DisableTelemetry {
+        /// Seconds to wait for GPIO18 to become high.
+        #[arg(long, default_value_t = 1)]
+        timeout_s: u32,
+    },
 
     /// Write shell completions to standard output.
     GenerateCompletions {

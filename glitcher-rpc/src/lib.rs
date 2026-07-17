@@ -107,7 +107,9 @@ pub enum Host2ControllerMessage {
         vid: Option<u8>,
     },
     /// Wait for GPIO18 to become high, then disable SVI2 telemetry.
-    DisableTelemetry,
+    DisableTelemetry {
+        timeout_s: u32,
+    },
 }
 
 // The parent package for all controller to host communication
@@ -123,5 +125,6 @@ pub enum Controller2HostMessage {
     SpiTapError(SpiTapError),
     VidSet,
     TelemetryDisabled,
+    TelemetryTimedOut,
     Svi2Error(Svi2Error),
 }
