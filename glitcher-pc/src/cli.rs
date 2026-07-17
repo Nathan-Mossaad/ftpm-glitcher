@@ -57,6 +57,10 @@ pub enum Command {
         /// Seconds to wait for GPIO18 to become high.
         #[arg(long, default_value_t = 1)]
         timeout_s: u32,
+
+        /// Reboot the target after telemetry is disabled.
+        #[arg(long)]
+        reboot: bool,
     },
 
     /// Write shell completions to standard output.

@@ -10,8 +10,7 @@ use embassy_rp::{
     pio,
     watchdog::Watchdog,
 };
-use embassy_time::{Delay, Duration, Timer, with_timeout};
-use embedded_hal::delay::DelayNs;
+use embassy_time::Timer;
 use glitcher_rpc::{
     ChunkStatus, Controller2HostMessage, FirmwareVersion, Host2ControllerMessage, RpcMessage,
     SPI_TAP_MAX_BYTES, postcard,
@@ -19,6 +18,7 @@ use glitcher_rpc::{
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
+mod attack;
 mod chip_select;
 #[path = "i2c-pio.rs"]
 mod i2c_pio;
@@ -100,7 +100,7 @@ async fn main(spawner: Spawner) {
                     Controller2HostMessage::Rebooting
                 }
                 Host2ControllerMessage::RebootTarget => {
-                    reboot_target(&mut target_reboot_pin).await;
+                    attack::reboot_target(&mut target_reboot_pin).await;
                     Controller2HostMessage::TargetRebooted
                 }
                 Host2ControllerMessage::CountChipSelects { timeout_s } => {
@@ -157,26 +157,18 @@ async fn main(spawner: Spawner) {
                     svi2::set_vid(&mut i2c, vid);
                     Controller2HostMessage::VidSet
                 }
-                Host2ControllerMessage::DisableTelemetry { timeout_s } => {
-                    match with_timeout(Duration::from_secs(timeout_s as u64), pin18.wait_for_high())
-                        .await
-                    {
-                        Ok(()) => {
-                            // Blocking wait
-                            Delay.delay_us(8);
-
-                            if (0..10_000).any(|_| pin19.is_low()) {
-                                // No waiting delay of PIO is roughly equals to length of one packet
-                                pin20.set_high();
-                                svi2::disable_telemetry(&mut i2c);
-                                pin20.set_low();
-                                Controller2HostMessage::TelemetryDisabled
-                            } else {
-                                Controller2HostMessage::TelemetryTimedOut
-                            }
-                        }
-                        Err(_) => Controller2HostMessage::TelemetryTimedOut,
+                Host2ControllerMessage::DisableTelemetry { timeout_s, reboot } => {
+                    if reboot {
+                        attack::reboot_target(&mut target_reboot_pin).await;
                     }
+                    pin20.set_high();
+                    Timer::after_millis(5).await;
+                    pin20.set_low();
+                    let message = attack::disable_telemetry(
+                        timeout_s, &mut pin18, &pin19, &mut pin20, &mut i2c,
+                    )
+                    .await;
+                    message
                 }
             };
             let response = RpcMessage {
@@ -213,14 +205,6 @@ async fn main(spawner: Spawner) {
 
         info!("Disconnected");
     }
-}
-
-/// Pulse the target reset line low, leaving it otherwise high-impedance.
-async fn reboot_target(target_reboot_pin: &mut Flex<'_>) {
-    target_reboot_pin.set_low();
-    target_reboot_pin.set_as_output();
-    Timer::after_millis(1).await;
-    target_reboot_pin.set_as_input();
 }
 
 fn firmware_version() -> FirmwareVersion {

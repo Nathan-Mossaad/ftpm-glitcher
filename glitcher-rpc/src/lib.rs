@@ -108,9 +108,10 @@ pub enum Host2ControllerMessage {
         /// A raw eight-bit VID. `None` selects the original default VIDs.
         vid: Option<u8>,
     },
-    /// Wait for GPIO18 to become high, then disable SVI2 telemetry.
+    /// Wait for GPIO18 to become high, then disable SVI2 telemetry and optionally reboot the target.
     DisableTelemetry {
         timeout_s: u32,
+        reboot: bool,
     },
 }
 
