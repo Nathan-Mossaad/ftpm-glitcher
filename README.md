@@ -63,9 +63,12 @@ Managed via [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 ```bash
 # Direcly modify helpers/determine-params.py and helpers/flash-pico.py to your needs
+cd helpers
 
 # For param determination
-uv run helpers/determine-params.py
+uv run determine-params.py > "results/attack-$(date -Is).txt"
+# Monitor the output via:
+./monitor.sh
 # Additionally get & print spi-tap data
 uv run helpers/extract-data.py
 ```

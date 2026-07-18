@@ -7,12 +7,11 @@ from time import sleep
 # Change these vals as needed.
 port = "/dev/ttyACM1"
 cs_count = 31
-# vid = 0xC0
-vid = 252
+vid = 0xC0
 wait_range = range(5_000, 10_000 + 1, 1_000)
-dip_range = range(200_000, 250_000 + 1, 10_000)
+dip_range = range(220_000, 230_000 + 1, 1_000)
 
-test_count = 20
+test_count = 4000
 
 
 for _ in range(test_count):
@@ -57,4 +56,4 @@ for _ in range(test_count):
         continue
 
     status = "success" if result.returncode == 0 else "broken"
-    print(f"({cs_count}, {vid}, {wait}, {dip}) => {status}")
+    print(f"({cs_count}, {vid}, {wait}, {dip}) => {status}", flush=True)
