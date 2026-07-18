@@ -145,7 +145,8 @@ pub fn set_vid<PIO: Instance, const SM: usize>(i2c: &mut I2cPio<'_, PIO, SM>, vi
     } else {
         // Match the recovery order used by the Teensy glitch firmware.
         Command::default().soc(true).vid(SOC_BOOT_VID).send(i2c);
-        Command::default().core(true).vid(CORE_BOOT_VID).send(i2c);
+        // Not needed on ryzen (may be needed on epyc)
+        // Command::default().core(true).vid(CORE_BOOT_VID).send(i2c);
     }
 }
 

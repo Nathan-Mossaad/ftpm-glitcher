@@ -112,7 +112,7 @@ pub enum Host2ControllerMessage {
     },
     /// Wait for GPIO18 to become high, then disable SVI2 telemetry and optionally reboot the target.
     DisableTelemetry {
-        timeout_s: u32,
+        timeout_ms: u64,
         reboot: bool,
     },
     /// Pull GP14 low for the requested duration to press the target's power button.
@@ -122,7 +122,7 @@ pub enum Host2ControllerMessage {
     /// Run a configured voltage glitch attack.
     GlitchAttack {
         spi_byte_count: u16,
-        vid: Option<u8>,
+        vid: u8,
         chip_select_count: u32,
         wait_duration_ns: u32,
         dip_duration_ns: u32,
@@ -148,4 +148,5 @@ pub enum Controller2HostMessage {
     PowerButtonPressed,
     GlitchAttackSucceeded,
     GlitchAttackFailed,
+    GlitchAttackFailedTargetNotRunning,
 }

@@ -103,10 +103,10 @@ fn main() -> Result<()> {
                 _ => bail!("Pico returned an unexpected response to an SVI2 voltage request"),
             }
         }
-        Command::DisableTelemetry { timeout_s, reboot } => {
+        Command::DisableTelemetry { timeout_ms, reboot } => {
             let response = console::send(
                 &cli.port,
-                &Host2ControllerMessage::DisableTelemetry { timeout_s, reboot },
+                &Host2ControllerMessage::DisableTelemetry { timeout_ms, reboot },
             )?;
             match response {
                 Controller2HostMessage::TelemetryDisabled => {
@@ -119,7 +119,7 @@ fn main() -> Result<()> {
                     }
                 }
                 Controller2HostMessage::TelemetryTimedOut => {
-                    bail!("GPIO18 did not become high within {timeout_s} seconds");
+                    bail!("GPIO18 did not become high within {timeout_ms} seconds");
                 }
                 Controller2HostMessage::Svi2Error(error) => {
                     bail!("SVI2 telemetry command failed: {error}");
@@ -134,25 +134,18 @@ fn main() -> Result<()> {
             wait_duration_ns,
             dip_duration_ns,
         } => {
-            let response = console::send(
+            let capture = console::glitch_attack(
                 &cli.port,
-                &Host2ControllerMessage::GlitchAttack {
-                    spi_byte_count,
-                    vid,
-                    chip_select_count,
-                    wait_duration_ns,
-                    dip_duration_ns,
-                },
+                spi_byte_count,
+                vid,
+                chip_select_count,
+                wait_duration_ns,
+                dip_duration_ns,
             )?;
-
-            match response {
-                Controller2HostMessage::GlitchAttackSucceeded => {
-                    println!("Glitch attack succeeded");
-                }
-                Controller2HostMessage::GlitchAttackFailed => {
-                    bail!("glitch attack failed");
-                }
-                _ => bail!("Pico returned an unexpected response to a glitch attack request"),
+            println!("Glitch attack succeeded");
+            println!("SPI RX: {:02x?}", capture.data);
+            if capture.timed_out {
+                bail!("attack SPI tap timed out; returning partial capture");
             }
         }
         Command::GenerateCompletions { shell } => {

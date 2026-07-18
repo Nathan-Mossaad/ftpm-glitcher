@@ -32,6 +32,13 @@ bind_interrupts!(struct PioIrqs {
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
+    // Warning when running in debug
+    if cfg!(debug_assertions) {
+        for _ in 0..10 {
+            error!("Warning: Running debug build, timings will be off!");
+        }
+    }
+
     info!("Starting USB serial!");
 
     let p = embassy_rp::init(Default::default());
@@ -42,9 +49,9 @@ async fn main(spawner: Spawner) {
     // Retain the peripherals and lend short-lived reborrows to either the
     // chip-select counter or the SPI tap.
     let mut spi0 = p.SPI0;
-    let mut slave_clk = p.PIN_2;
-    let mut slave_miso = p.PIN_4;
-    let mut slave_cs_pin = p.PIN_5;
+    let mut spi_slave_clk = p.PIN_2;
+    let mut spi_slave_miso = p.PIN_4;
+    let mut spi_slave_cs_pin = p.PIN_5;
     let mut spi_tx_dma = p.DMA_CH2;
     let mut spi_rx_dma = p.DMA_CH3;
     static SPI_CAPTURE: StaticCell<[u8; SPI_TAP_MAX_BYTES]> = StaticCell::new();
@@ -116,16 +123,47 @@ async fn main(spawner: Spawner) {
                     chip_select_count,
                     wait_duration_ns,
                     dip_duration_ns,
-                } => {
-                    error!("TODO!");
-                    Controller2HostMessage::GlitchAttackFailed
-                }
+                } => match attack::single_attack(
+                    &mut target_reboot_pin,
+                    &mut svd_in,
+                    &mut svc_in,
+                    &mut logic_analyzer_trigger,
+                    &mut i2c,
+                    &mut spi_slave_cs_pin,
+                    &mut spi0,
+                    &mut spi_slave_clk,
+                    &mut spi_slave_miso,
+                    &mut spi_tx_dma,
+                    &mut spi_rx_dma,
+                    capture,
+                    spi_byte_count,
+                    chip_select_count,
+                    vid,
+                    wait_duration_ns,
+                    dip_duration_ns,
+                )
+                .await
+                {
+                    Ok(result) => match write_spi_tap_capture(
+                        &mut class, request.id, capture, result, &mut buf,
+                    )
+                    .await
+                    {
+                        Ok(()) => continue,
+                        Err(serial::ChunkWriteError::Disconnected) => break,
+                        Err(serial::ChunkWriteError::Serialize(error)) => {
+                            warn!("Failed to serialize chunked response: {}", error);
+                            continue;
+                        }
+                    },
+                    Err(message) => message,
+                },
                 Host2ControllerMessage::CountChipSelects { timeout_s, reboot } => {
                     if reboot {
                         attack::reboot_target(&mut target_reboot_pin).await;
                     }
                     Controller2HostMessage::ChipSelectCount(
-                        chip_select::count_chip_selects(timeout_s, &mut slave_cs_pin).await,
+                        chip_select::count_chip_selects(timeout_s, &mut spi_slave_cs_pin).await,
                     )
                 }
                 Host2ControllerMessage::TapSpi {
@@ -138,9 +176,9 @@ async fn main(spawner: Spawner) {
                     }
                     let result = spi_tap::tap_spi(
                         &mut spi0,
-                        &mut slave_clk,
-                        &mut slave_miso,
-                        &mut slave_cs_pin,
+                        &mut spi_slave_clk,
+                        &mut spi_slave_miso,
+                        &mut spi_slave_cs_pin,
                         &mut spi_tx_dma,
                         &mut spi_rx_dma,
                         capture,
@@ -150,29 +188,18 @@ async fn main(spawner: Spawner) {
                     .await;
 
                     match result {
-                        Ok(result) => {
-                            let status = if result.timed_out {
-                                ChunkStatus::TimedOut
-                            } else {
-                                ChunkStatus::Complete
-                            };
-                            match serial::write_chunked(
-                                &mut class,
-                                request.id,
-                                &capture[..result.byte_count],
-                                status,
-                                &mut buf,
-                            )
-                            .await
-                            {
-                                Ok(()) => continue,
-                                Err(serial::ChunkWriteError::Disconnected) => break,
-                                Err(serial::ChunkWriteError::Serialize(error)) => {
-                                    warn!("Failed to serialize chunked response: {}", error);
-                                    continue;
-                                }
+                        Ok(result) => match write_spi_tap_capture(
+                            &mut class, request.id, capture, result, &mut buf,
+                        )
+                        .await
+                        {
+                            Ok(()) => continue,
+                            Err(serial::ChunkWriteError::Disconnected) => break,
+                            Err(serial::ChunkWriteError::Serialize(error)) => {
+                                warn!("Failed to serialize chunked response: {}", error);
+                                continue;
                             }
-                        }
+                        },
                         Err(error) => Controller2HostMessage::SpiTapError(error),
                     }
                 }
@@ -181,15 +208,16 @@ async fn main(spawner: Spawner) {
                     svi2::set_vid(&mut i2c, vid);
                     Controller2HostMessage::VidSet
                 }
-                Host2ControllerMessage::DisableTelemetry { timeout_s, reboot } => {
+                Host2ControllerMessage::DisableTelemetry { timeout_ms, reboot } => {
                     if reboot {
-                        attack::reboot_target(&mut target_reboot_pin).await;
-                        logic_analyzer_trigger.set_high();
-                        Timer::after_millis(5).await;
-                        logic_analyzer_trigger.set_low();
+                        attack::reboot_target_with_trigger(
+                            &mut target_reboot_pin,
+                            &mut logic_analyzer_trigger,
+                        )
+                        .await;
                     }
                     let message = attack::wait_boot_and_disable_telemetry(
-                        timeout_s,
+                        timeout_ms,
                         &mut svd_in,
                         &mut svc_in,
                         &mut logic_analyzer_trigger,
@@ -233,6 +261,28 @@ async fn main(spawner: Spawner) {
 
         info!("Disconnected");
     }
+}
+
+async fn write_spi_tap_capture(
+    class: &mut serial::UsbSerial,
+    request_id: u32,
+    capture: &[u8; SPI_TAP_MAX_BYTES],
+    result: spi_tap::SpiTapResult,
+    buffer: &mut [u8; 64],
+) -> Result<(), serial::ChunkWriteError> {
+    let status = if result.timed_out {
+        ChunkStatus::TimedOut
+    } else {
+        ChunkStatus::Complete
+    };
+    serial::write_chunked(
+        class,
+        request_id,
+        &capture[..result.byte_count],
+        status,
+        buffer,
+    )
+    .await
 }
 
 fn firmware_version() -> FirmwareVersion {

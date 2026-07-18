@@ -76,6 +76,47 @@ pub fn tap_spi(
     })
 }
 
+/// Run a glitch attack and reassemble its post-attack SPI capture.
+pub fn glitch_attack(
+    port_name: &Path,
+    spi_byte_count: u16,
+    vid: u8,
+    chip_select_count: u32,
+    wait_duration_ns: u32,
+    dip_duration_ns: u32,
+) -> Result<SpiTapCapture> {
+    let message = Host2ControllerMessage::GlitchAttack {
+        spi_byte_count,
+        vid,
+        chip_select_count,
+        wait_duration_ns,
+        dip_duration_ns,
+    };
+    let (mut port, request_id) = open_and_send(port_name, &message)?;
+    let mut reader = ResponseReader::new();
+    let transfer = receive_chunks(
+        &mut *port,
+        &mut reader,
+        request_id,
+        SPI_TAP_MAX_BYTES,
+        |message| match message {
+            Controller2HostMessage::Chunk(chunk) => Ok(chunk),
+            Controller2HostMessage::SpiTapError(error) => bail!("attack SPI tap failed: {error}"),
+            Controller2HostMessage::GlitchAttackFailed => bail!("glitch attack failed"),
+            Controller2HostMessage::GlitchAttackFailedTargetNotRunning => {
+                bail!("glitch attack failed because the target was not running")
+            }
+            message => {
+                bail!("Pico returned an unexpected response to a glitch attack: {message:?}")
+            }
+        },
+    )?;
+    Ok(SpiTapCapture {
+        data: transfer.data,
+        timed_out: matches!(transfer.status, ChunkStatus::TimedOut),
+    })
+}
+
 pub fn receive_chunks<F>(
     port: &mut dyn SerialPort,
     reader: &mut ResponseReader,

@@ -70,8 +70,8 @@ pub enum Command {
     /// Wait for GPIO18 to become high, then disable SVI2 telemetry.
     DisableTelemetry {
         /// Seconds to wait for GPIO18 to become high.
-        #[arg(long, default_value_t = 1)]
-        timeout_s: u32,
+        #[arg(long, default_value_t = 1000)]
+        timeout_ms: u64,
 
         /// Reboot the target after telemetry is disabled.
         #[arg(long)]
@@ -81,23 +81,23 @@ pub enum Command {
     /// Run a voltage glitch attack.
     Attack {
         /// Number of SPI bytes to capture (1 through 16384).
-        #[arg(long, default_value_t = 32, value_parser = clap::value_parser!(u16).range(1..=16384))]
+        #[arg(long, default_value_t = 4096, value_parser = clap::value_parser!(u16).range(1..=16384))]
         spi_byte_count: u16,
 
         /// Raw eight-bit VID. Omit to use the controller default VIDs.
-        #[arg(long, value_parser = clap::value_parser!(u8).range(0..=255))]
-        vid: Option<u8>,
+        #[arg(long, default_value_t = 0xC0,value_parser = clap::value_parser!(u8).range(0..=255))]
+        vid: u8,
 
         /// Chip-select falling-edge count that triggers the glitch.
-        #[arg(long, default_value_t = 1)]
+        #[arg(long)]
         chip_select_count: u32,
 
         /// Delay after the trigger before dipping the voltage, in nanoseconds.
-        #[arg(long, default_value_t = 0)]
+        #[arg(long)]
         wait_duration_ns: u32,
 
         /// Voltage-dip duration, in nanoseconds.
-        #[arg(long, default_value_t = 0)]
+        #[arg(long)]
         dip_duration_ns: u32,
     },
 
