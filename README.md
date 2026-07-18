@@ -72,3 +72,29 @@ uv run determine-params.py > "results/attack-$(date -Is).txt"
 # Additionally get & print spi-tap data
 uv run helpers/extract-data.py
 ```
+
+# Tips & Tricks
+
+Check that pico firmware version matches cli version
+
+```bash
+glitcher check-version
+```
+
+Almost instant shutdown (by killing power to the CPU :D)
+
+```bash
+glitcher disable-telemetry --reboot; glitcher set-vid 252
+```
+
+Power on
+
+```bash
+glitcher press-power-button --duration-ms 100
+```
+
+Count chip selects (mainly usefull with modified firmware for parameter determination)
+
+```bash
+glitcher count-chip-selects 3
+```
