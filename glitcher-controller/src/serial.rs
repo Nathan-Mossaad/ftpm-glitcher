@@ -71,7 +71,7 @@ pub async fn write_chunked(
         let response = RpcMessage {
             id: request_id,
             message: Controller2HostMessage::Chunk(Chunk {
-                offset: offset as u16,
+                offset: offset as u32,
                 data: chunk_data,
                 byte_count: end.saturating_sub(offset) as u8,
                 is_last,

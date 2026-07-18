@@ -16,10 +16,10 @@ pub async fn tap_spi(
     spi_tx_dma: &mut Peri<'static, DMA_CH2>,
     spi_rx_dma: &mut Peri<'static, DMA_CH3>,
     capture: &mut [u8; SPI_TAP_MAX_BYTES],
-    byte_count: u16,
+    byte_count: u32,
     timeout_s: u32,
 ) -> Result<SpiTapResult, SpiTapError> {
-    let byte_count = usize::from(byte_count);
+    let byte_count = byte_count as usize;
     if !(1..=SPI_TAP_MAX_BYTES).contains(&byte_count) {
         return Err(SpiTapError::InvalidByteCount);
     }

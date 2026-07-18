@@ -26,7 +26,7 @@ pub async fn single_attack<PIO: Instance, const SM: usize>(
     spi_tx_dma: &mut Peri<'static, DMA_CH2>,
     spi_rx_dma: &mut Peri<'static, DMA_CH3>,
     capture: &mut [u8; SPI_TAP_MAX_BYTES],
-    spi_byte_count: u16,
+    spi_byte_count: u32,
     chip_select_count: u32,
     vid: u8,
     wait_duration_ns: u32,

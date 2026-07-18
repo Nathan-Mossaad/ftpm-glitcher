@@ -46,7 +46,7 @@ pub fn send(port_name: &Path, message: &Host2ControllerMessage) -> Result<Contro
 /// Capture an SPI transaction and reassemble its COBS-framed response chunks.
 pub fn tap_spi(
     port_name: &Path,
-    byte_count: u16,
+    byte_count: u32,
     timeout_s: u32,
     reboot: bool,
 ) -> Result<SpiTapCapture> {
@@ -79,7 +79,7 @@ pub fn tap_spi(
 /// Run a glitch attack and reassemble its post-attack SPI capture.
 pub fn glitch_attack(
     port_name: &Path,
-    spi_byte_count: u16,
+    spi_byte_count: u32,
     vid: u8,
     chip_select_count: u32,
     wait_duration_ns: u32,
@@ -140,7 +140,7 @@ where
         }
 
         let chunk = chunk_from_message(response.message)?;
-        let offset = usize::from(chunk.offset);
+        let offset = chunk.offset as usize;
         let chunk_len = usize::from(chunk.byte_count);
         if chunk_len > CHUNK_BYTES {
             bail!("controller sent an oversized chunk");

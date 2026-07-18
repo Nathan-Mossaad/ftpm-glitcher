@@ -45,11 +45,11 @@ pub enum Command {
         reboot: bool,
     },
 
-    /// Capture a single SPI0 transaction (up to 16 KiB).
+    /// Capture a single SPI0 transaction (up to 128 KiB).
     TapSpi {
-        /// Number of bytes to capture (1 through 16384).
-        #[arg(long, default_value_t = 32, value_parser = clap::value_parser!(u16).range(1..=16384))]
-        byte_count: u16,
+        /// Number of bytes to capture (1 through 131072).
+        #[arg(long, default_value_t = 32, value_parser = clap::value_parser!(u32).range(1..=131072))]
+        byte_count: u32,
 
         /// Seconds to wait for the transaction.
         #[arg(long, default_value_t = 1)]
@@ -80,9 +80,9 @@ pub enum Command {
 
     /// Run a voltage glitch attack.
     Attack {
-        /// Number of SPI bytes to capture (1 through 16384).
-        #[arg(long, default_value_t = 4096, value_parser = clap::value_parser!(u16).range(1..=16384))]
-        spi_byte_count: u16,
+        /// Number of SPI bytes to capture (1 through 131072).
+        #[arg(long, default_value_t = 4096, value_parser = clap::value_parser!(u32).range(1..=131072))]
+        spi_byte_count: u32,
 
         /// Raw eight-bit VID. Omit to use the controller default VIDs.
         #[arg(long, default_value_t = 0xC0,value_parser = clap::value_parser!(u8).range(0..=255))]

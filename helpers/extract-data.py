@@ -33,7 +33,7 @@ for _ in range(test_count):
             "--dip-duration-ns",
             str(dip),
             "--spi-byte-count",
-            "16384",
+            "131072",
         ],
         check=False,
         capture_output=True,

@@ -5,7 +5,7 @@ pub use postcard;
 use serde::{Deserialize, Serialize};
 
 /// The largest SPI transaction the tap currently captures.
-pub const SPI_TAP_MAX_BYTES: usize = 16 * 1024;
+pub const SPI_TAP_MAX_BYTES: usize = 128 * 1024;
 
 /// Capture data carried in one USB/RPC response frame.
 ///
@@ -24,7 +24,7 @@ pub enum ChunkStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "mcu", derive(defmt::Format))]
 pub struct Chunk {
-    pub offset: u16,
+    pub offset: u32,
     pub data: [u8; CHUNK_BYTES],
     pub byte_count: u8,
     pub is_last: bool,
@@ -99,9 +99,9 @@ pub enum Host2ControllerMessage {
         timeout_s: u32,
         reboot: bool,
     },
-    /// Capture one SPI0 slave transaction. `byte_count` must be 1..=16384.
+    /// Capture one SPI0 slave transaction. `byte_count` must be 1..=131072.
     TapSpi {
-        byte_count: u16,
+        byte_count: u32,
         timeout_s: u32,
         reboot: bool,
     },
@@ -121,7 +121,7 @@ pub enum Host2ControllerMessage {
     },
     /// Run a configured voltage glitch attack.
     GlitchAttack {
-        spi_byte_count: u16,
+        spi_byte_count: u32,
         vid: u8,
         chip_select_count: u32,
         wait_duration_ns: u32,
