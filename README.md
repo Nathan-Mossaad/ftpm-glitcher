@@ -98,3 +98,13 @@ Count chip selects (mainly usefull with modified firmware for parameter determin
 ```bash
 glitcher count-chip-selects 3
 ```
+
+Properly integrate glitcher into zsh with my [zsh setup](https://github.com/Nathan-Mossaad/zshrc)
+
+```bash
+cp glitcher-pc/target/release/glitcher ~/.local/bin/glitcher
+glitcher generate-completions zsh > ~/.zfunc/_glitcher
+# alias glitcher for a different port
+echo 'alias glitcher="glitcher --port /dev/ttyACM1"' >> .zshrc
+# Reload shell
+```
