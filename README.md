@@ -64,6 +64,7 @@ Managed via [uv](https://docs.astral.sh/uv/getting-started/installation/)
 ```bash
 # Direcly modify helpers/determine-params.py and helpers/flash-pico.py to your needs
 cd helpers
+mkdir results
 
 # For param determination
 uv run determine-params.py > "results/attack-$(date -Is).txt"

@@ -11,7 +11,7 @@ use crate::i2c_pio::I2cPio;
 use crate::spi_tap::{self, SpiTapResult};
 use crate::svi2;
 
-const ATTACK_SPI_TAP_TIMEOUT_S: u32 = 1;
+const ATTACK_SPI_TAP_TIMEOUT_S: u32 = 5;
 
 pub async fn single_attack<PIO: Instance, const SM: usize>(
     target_reboot_pin: &mut Flex<'_>,
