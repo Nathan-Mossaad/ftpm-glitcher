@@ -125,6 +125,7 @@ async fn main(spawner: Spawner) {
                     dip_duration_ns,
                 } => match attack::single_attack(
                     &mut target_reboot_pin,
+                    &mut power_button_pin,
                     &mut svd_in,
                     &mut svc_in,
                     &mut logic_analyzer_trigger,
@@ -225,6 +226,24 @@ async fn main(spawner: Spawner) {
                     )
                     .await;
                     message
+                }
+                Host2ControllerMessage::DetermineParam { vid } => {
+                    attack::determine_wait_duration(
+                        &mut target_reboot_pin,
+                        &mut power_button_pin,
+                        &mut svd_in,
+                        &mut svc_in,
+                        &mut logic_analyzer_trigger,
+                        &mut i2c,
+                        &mut spi_slave_cs_pin,
+                        &mut spi0,
+                        &mut spi_slave_clk,
+                        &mut spi_slave_miso,
+                        &mut spi_tx_dma,
+                        &mut spi_rx_dma,
+                        vid,
+                    )
+                    .await
                 }
             };
             let response = RpcMessage {
