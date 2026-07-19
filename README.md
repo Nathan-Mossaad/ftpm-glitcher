@@ -1,8 +1,46 @@
+# Glitching firmware for the AMD SP
+
+(currently only tested on a A520M-HVS & AMD Ryzen 3600)
+
+# Contents
+
+- [Wiring setup](#wiring-setup)
+- [Parameter Determination](#parameter-determination)
+- [Docs](#docs)
+- [Building](#building)
+  - [Pico firmware](#pico-firmware)
+  - [Cli tool](#cli-tool)
+  - [Helper scripts](#helper-scripts)
+- [Tips & Tricks](#tips--tricks)
+
 # Wiring setup
 
 ![wiring png](./wiring/wiring.png)
 
 As pdf: [wiring pdf](./wiring/wiring.pdf)
+
+# Parameter Determination
+
+For the following I'd recommend you read both "faultpm: Exposing amd ftpms' deepest secrets" and "One glitch to rule them all: Fault injection attacks against amd's secure encrypted virtualization"
+
+Use instructions from upstream: [parameter determination by PSPReverse](https://github.com/PSPReverse/amd-sp-glitch/blob/main/attack-code/ParameterDetermination.md)
+
+I would recommend slight some slight variations:
+
+1. Backup the SPI flash (important, as the ftpm secrets are stored there) e.g. using [pico-serprog](https://codeberg.org/Riku_V/pico-serprog)
+2. Prepare the modified firmware:
+
+- e.g. [hello world](https://github.com/PSPReverse/amd-sp-glitch/tree/main/payloads/hello-world) (Note it only outputs "H" due to a bug)
+- Use [psptool](https://github.com/PSPReverse/PSPTool) to patch the firmware to create a modified SPI flash image
+
+3. Flash the modified firmware
+4. Determine the chip select count till ARK validation by using `glitcher count-chip-selects --reboot` (in our case 33)
+5. Flash the original firmware
+6. Use a few pulses (e.g. 31), use a low wait-duration and increase `dip-duration` till the target fully crashes. The target test range should end slightly before the target crashes. Test using `glitcher attack --chip-select-count <CHIP_SELECT_COUNT> --wait-duration-ns <WAIT_DURATION_NS> --dip-duration-ns <DIP_DURATION_NS> --spi-byte-count 2`
+7. Use the logic analyzer to align the end of the second SVI2 packet injection shortly before the end of the validation window. If you have no logic analyzer, you will have to compensate by increaseing the wait-duration range to definitly hit the ark validation.
+8. Refine params by setting the custom ranges in [determine-params](helpers/determine-params.py) and run. Now use the resulting values with [duration_test_plot](https://github.com/Nathan-Mossaad/amd-sp-glitch/blob/5e63abd1f0da41acaa2ef0fc65212f0690687d37/attack-code/duration_test_plot.py) to determine a smaller range, in accordance with "One glitch".
+9. Flash the modified firmware
+10. Start glitching using [extract-data](./helpers/extract-data.py) (see section [Helper scripts](#helper-scripts) for how to use [monitor.sh](./helpers/monitor.sh))
 
 # Docs
 
@@ -47,6 +85,9 @@ cargo run -r
 ```
 
 ## Cli tool
+
+> [!NOTE]
+> Make sure your user account belongs to the group that grants access to USB serial devices (for example, `dialout`).
 
 Direct compile and run
 
