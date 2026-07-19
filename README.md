@@ -1,3 +1,9 @@
+# Wiring setup
+
+![wiring png](./wiring/wiring.png)
+
+As pdf: [wiring pdf](./wiring/wiring.pdf)
+
 # Docs
 
 Mostly missing, refer to `--help` of `glitcher` for now.
