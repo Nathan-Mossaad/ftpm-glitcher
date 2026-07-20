@@ -45,14 +45,6 @@ pub enum Svi2Error {
     WriteFailed,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "mcu", derive(defmt::Format))]
-pub struct Parameters {
-    pub delay: (u32, u32),
-    pub duration: (u32, u32),
-    pub chip_select_count: u32,
-}
-
 impl core::fmt::Display for Svi2Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -135,10 +127,6 @@ pub enum Host2ControllerMessage {
         wait_duration_ns: u32,
         dip_duration_ns: u32,
     },
-    /// Determine the delay and duration of a glitch attack.
-    DetermineParam {
-        vid: u8,
-    },
 }
 
 // The parent package for all controller to host communication
@@ -161,7 +149,4 @@ pub enum Controller2HostMessage {
     GlitchAttackSucceeded,
     GlitchAttackFailed,
     GlitchAttackFailedTargetNotRunning,
-    DetermineParamSucceeded(Parameters),
-    DetermineParamFailedNotRunning,
-    DetermineParamFailed,
 }

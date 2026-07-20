@@ -21,16 +21,6 @@ As pdf: [wiring pdf](./wiring/wiring.pdf)
 
 # Parameter Determination
 
-## Automatic
-
-Automatic parameter determination is supported via `glitcher determine-parameters`.
-While determining parameters, the original firmware needs to be flashed.
-The default VID of `0xC0` should be sufficient for most ASP. The returned parameters are:
-- `[delay_min, delay_max]` <- the ARK verification window
-- `[duration_min, duration_max]` <- duration window with ~50% probability of crashing target
-- `chip_select_count` <- the number of chip select cycles to wait (before delay)
-## Manual
-
 For the following I'd recommend you read both "faultpm: Exposing amd ftpms' deepest secrets" and "One glitch to rule them all: Fault injection attacks against amd's secure encrypted virtualization"
 
 Use instructions from upstream: [parameter determination by PSPReverse](https://github.com/PSPReverse/amd-sp-glitch/blob/main/attack-code/ParameterDetermination.md)

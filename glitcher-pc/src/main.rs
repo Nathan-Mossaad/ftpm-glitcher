@@ -148,16 +148,6 @@ fn main() -> Result<()> {
                 bail!("attack SPI tap timed out; returning partial capture");
             }
         }
-        Command::DetermineParameters { vid } => {
-            let response =
-                console::send(&cli.port, &Host2ControllerMessage::DetermineParam { vid });
-            match response {
-                Ok(result) => {
-                    println!("Parameters: {:?}", result);
-                }
-                Err(e) => bail!(e),
-            }
-        }
         Command::GenerateCompletions { shell } => {
             generate(
                 shell,

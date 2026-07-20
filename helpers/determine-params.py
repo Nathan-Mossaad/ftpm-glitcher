@@ -8,7 +8,7 @@ from time import sleep
 port = "/dev/ttyACM1"
 cs_count = 31
 vid = 0xC0
-wait_range = range(225_000, 240_000 + 1, 1_000)
+wait_range = range(5_000, 10_000 + 1, 1_000)
 dip_range = range(220_000, 230_000 + 1, 1_000)
 
 test_count = 4000

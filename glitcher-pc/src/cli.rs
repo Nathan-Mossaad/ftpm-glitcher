@@ -101,12 +101,6 @@ pub enum Command {
         dip_duration_ns: u32,
     },
 
-    DetermineParameters {
-        /// VID to use for the attack.
-        #[arg(long, default_value_t = 0xC0, value_parser = clap::value_parser!(u8).range(0..=255))]
-        vid: u8,
-    },
-
     /// Write shell completions to standard output.
     GenerateCompletions {
         /// Shell to generate completions for.
