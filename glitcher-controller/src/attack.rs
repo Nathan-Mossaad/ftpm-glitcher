@@ -1,3 +1,4 @@
+use cortex_m::prelude::_embedded_hal_Capture;
 use defmt::{info, warn};
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Flex, Input, Output, Pull};
@@ -106,7 +107,7 @@ pub async fn determine_wait_duration<PIO: Instance, const SM: usize>(
         }
     };
 
-    let duration_range = 200_000..500_000;
+    let duration_range = (200_000..500_000);
     let mut duration_step = 20_000;
     let mut duration = duration_range.start;
 
@@ -244,13 +245,13 @@ pub async fn determine_wait_duration<PIO: Instance, const SM: usize>(
                     duration: (duration - duration_step, duration + duration_step),
                     chip_select_count: num_cs_used,
                 });
-            } else if crash_count > 30 {
+            } else if (crash_count > 30) {
                 duration_step = 1_000;
-            } else if crash_count > 20 {
+            } else if (crash_count > 20) {
                 duration_step = 2_000;
-            } else if crash_count > 10 {
+            } else if (crash_count > 10) {
                 duration_step = 5_000;
-            } else if crash_count > 1 {
+            } else if (crash_count > 1) {
                 duration_step = 10_000;
             }
             duration += duration_step;
